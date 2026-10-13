@@ -1,0 +1,17 @@
+# Member navigation setup
+
+The post-login shell reads `profiles` under the user's session and RLS. No role or approval is inferred from editable Auth metadata. A missing profile or failed query shows a retry screen; it never grants access. Professional profiles also read their own application to decide whether Market is available.
+
+Apply `migrations/0004_confirmed_account_activation.sql` in the Supabase SQL Editor after confirming migrations 0001–0003 are already installed. Do not rerun the foundation migrations against existing tables. This repository change has **not** been executed against the hosted database.
+
+The migration activates confirmed pending Buyer/Amateur accounts, including existing accounts. It leaves Professional/Admin and suspended/disabled accounts unchanged, restricts client profile writes to safe columns, and prevents submitting an already-approved professional application. The account update trigger permits trusted backend database roles to manage privileges.
+
+Until applied, existing confirmed Buyer/Amateur profiles can remain pending in the database. The current blank shell allows confirmed pending accounts to enter; future feature permissions must check account status in the backend.
+
+The shell uses role-based tabs: Buyer sees Home, Market and Profile; Amateur sees Home, Map, Trips, Market and Profile; an active Professional sees Map and Trips, and sees Market only with an approved application and unexpired licence; Admin currently sees Home and Profile. Inactive, suspended and disabled accounts cannot use role-restricted tabs; suspended and disabled accounts are blocked. The first Map version reads and saves owner-private fishing spots using the `fishing_spots` table and its RLS policy from migration 0002. Auction operations are not implemented; future operations must validate role, account status, professional approval and licence expiry in the backend.
+
+The Map screen renders MapLibre GL JS in `react-native-webview`, using OpenFreeMap Liberty vector tiles and OSM data. `react-native-webview` is included in Expo Go, so the `phone` script starts Metro in Expo Go mode and no iOS development build is needed for map testing. The web map and React Native screen exchange spot selections and saved private spots through the WebView message bridge. The map currently loads its MapLibre GL JS script and style from the internet, so map testing requires a network connection. GPS is requested only after the user presses the location control. Historical trips/catches, filters, marine data and protected areas remain future Map work. Home, Trips, Market and Profile remain empty. Trip recording, profile details, document upload and admin review content will be designed one at a time.
+
+If the app reports `PGRST205` for `public.fishing_spots`, run `repair_missing_fishing_spots.sql` in the Supabase SQL Editor for the project configured in `.env.local`. The script creates the table only if absent, reapplies owner-only RLS and grants, then requests a PostgREST schema reload. It requires migration 0001's `profiles` table and `set_updated_at()` function. It preserves existing spot rows.
+
+Manual device review: confirm the expected tab set for Buyer, Amateur, pending/approved/expired Professional and active Admin; test the Map, GPS permission, selecting/saving a private spot, sign-out, unavailable profile/network retry, suspended/disabled account, Greek/English, small screen and larger font settings. Real role approval and activation must be set by the backend, never client metadata.
